@@ -1,26 +1,22 @@
-variable "base_name" {
-  description = "Base name for resource creation"
+/* -------------------------------------------------------------------------- */
+/*                                   Generic                                  */
+/* -------------------------------------------------------------------------- */
+variable "name" {
+  description = "Name of the ECS cluster to create"
   type        = string
 }
 
-variable "use_case" {
-  description = "Used for naming the SNS Resource, use case for which notification is to be sent. E.g. This module can be used for RDS notifications, CodePipeline stage alerts, Fargate alerts, etc."
+variable "environment" {
+  description = "Environment Variable used as a prefix"
   type        = string
 }
 
-variable "email_ids" {
-  description = "List of email ids where alerts are to be published"
-  type        = list(string)
-  default     = []
+variable "prefix" {
+  description = "The prefix name of customer to be displayed in AWS console and resource"
+  type        = string
 }
 
-variable "additional_services_allowed_pricipals" {
-  description = "List of additional Service principals that're allowed to action on SNS"
-  type        = list(string)
-  default     = []
-}
-
-variable "custom_tags" {
+variable "tags" {
   description = "Custom tags which can be passed on to the AWS resources. They should be key value pairs having distinct keys"
   type        = map(any)
   default     = {}
