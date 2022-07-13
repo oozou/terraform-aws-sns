@@ -52,6 +52,7 @@ data "aws_iam_policy_document" "this" {
       "SNS:Publish"
     ]
     resources = [local.this_sns_arn]
+
     condition {
       test     = "StringEquals"
       variable = "AWS:SourceOwner"

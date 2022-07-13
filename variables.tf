@@ -77,11 +77,6 @@ variable "is_content_based_deduplication" {
 
 
 
-variable "policy" {
-  description = "The fully-formed AWS policy as JSON"
-  type        = string
-  default     = null
-}
 
 variable "delivery_policy" {
   description = "The SNS delivery policy"
@@ -157,12 +152,6 @@ variable "sqs_success_feedback_sample_rate" {
 
 variable "sqs_failure_feedback_role_arn" {
   description = "IAM role for failure feedback"
-  type        = string
-  default     = null
-}
-
-variable "kms_master_key_id" {
-  description = "The ID of an AWS-managed customer master key (CMK) for Amazon SNS or a custom CMK"
   type        = string
   default     = null
 }
