@@ -2,7 +2,6 @@
 /*                                   Locals                                   */
 /* -------------------------------------------------------------------------- */
 data "aws_caller_identity" "current" {}
-
 data "aws_region" "current" {}
 
 locals {
@@ -47,7 +46,7 @@ data "aws_iam_policy_document" "this" {
 /* -------------------------------------------------------------------------- */
 resource "aws_sns_topic" "this" {
   name                                     = local.name
-  display_name                             = local.name
+  display_name                             = var.display_name == "" ? local.name : var.display_name
   policy                                   = data.aws_iam_policy_document.this.json
   delivery_policy                          = var.delivery_policy
   application_success_feedback_role_arn    = var.application_success_feedback_role_arn

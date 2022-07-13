@@ -12,8 +12,14 @@ variable "environment" {
 }
 
 variable "name" {
-  description = "Name of the ECS cluster to create"
+  description = "Name of resource"
   type        = string
+}
+
+variable "display_name" {
+  description = "The display name for the SNS topic"
+  type        = string
+  default     = ""
 }
 
 variable "tags" {
@@ -29,24 +35,6 @@ variable "tags" {
 
 
 
-
-variable "create_sns_topic" {
-  description = "Whether to create the SNS topic"
-  type        = bool
-  default     = true
-}
-
-variable "name_prefix" {
-  description = "The prefix name of the SNS topic to create"
-  type        = string
-  default     = null
-}
-
-variable "display_name" {
-  description = "The display name for the SNS topic"
-  type        = string
-  default     = null
-}
 
 variable "policy" {
   description = "The fully-formed AWS policy as JSON"
