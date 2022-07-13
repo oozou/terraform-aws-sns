@@ -1,8 +1,8 @@
 /* -------------------------------------------------------------------------- */
 /*                                   Generic                                  */
 /* -------------------------------------------------------------------------- */
-variable "name" {
-  description = "Name of the ECS cluster to create"
+variable "prefix" {
+  description = "The prefix name of customer to be displayed in AWS console and resource"
   type        = string
 }
 
@@ -11,8 +11,8 @@ variable "environment" {
   type        = string
 }
 
-variable "prefix" {
-  description = "The prefix name of customer to be displayed in AWS console and resource"
+variable "name" {
+  description = "Name of the ECS cluster to create"
   type        = string
 }
 
@@ -29,16 +29,11 @@ variable "tags" {
 
 
 
+
 variable "create_sns_topic" {
   description = "Whether to create the SNS topic"
   type        = bool
   default     = true
-}
-
-variable "name" {
-  description = "The name of the SNS topic to create"
-  type        = string
-  default     = null
 }
 
 variable "name_prefix" {
