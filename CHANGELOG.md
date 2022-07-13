@@ -20,3 +20,4 @@
         | `true`    | `false`   | "\<arn\>" | :heavy_check_mark: |                    | :heavy_check_mark: |                       |
         | `true`    | `true`    | ""        | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |                       |
         | `true`    | `true`    | "\<arn\>" | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | kms_arn will not used |
+    - Add FIFO and deduplication function to be toggle

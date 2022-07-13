@@ -55,6 +55,20 @@ variable "additional_kms_key_policies" {
   default     = []
 }
 
+/* -------------------------------------------------------------------------- */
+/*                                     SNS                                    */
+/* -------------------------------------------------------------------------- */
+variable "is_fifo_topic" {
+  description = "Boolean indicating whether or not to create a FIFO (first-in-first-out) topic"
+  type        = bool
+  default     = false
+}
+
+variable "is_content_based_deduplication" {
+  description = "Boolean indicating whether or not to enable content-based deduplication for FIFO topics."
+  type        = bool
+  default     = false
+}
 
 
 
@@ -151,16 +165,4 @@ variable "kms_master_key_id" {
   description = "The ID of an AWS-managed customer master key (CMK) for Amazon SNS or a custom CMK"
   type        = string
   default     = null
-}
-
-variable "fifo_topic" {
-  description = "Boolean indicating whether or not to create a FIFO (first-in-first-out) topic"
-  type        = bool
-  default     = false
-}
-
-variable "content_based_deduplication" {
-  description = "Boolean indicating whether or not to enable content-based deduplication for FIFO topics."
-  type        = bool
-  default     = false
 }

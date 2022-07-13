@@ -1,3 +1,5 @@
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic
+# deliver policy -> https://docs.aws.amazon.com/sns/latest/dg/sns-message-delivery-retries.html
 /* -------------------------------------------------------------------------- */
 /*                                   Locals                                   */
 /* -------------------------------------------------------------------------- */
@@ -21,16 +23,8 @@ locals {
 }
 
 locals {
-  raise_exist_kms_require = var.is_enable_encryption && var.is_create_kms == false && var.exist_kms_key_arn == "" ? file("var.exist_kms_key_arn is required when var.is_enable_encryption == true and is_create_kms == false") : "pass"
-}
-
-output "debug" {
-  value = {
-    kms_key_arn        = try(local.kms_key_arn, null)
-    kms_key_id         = try(local.kms_key_id, null)
-    module_kms_key_arn = try(module.kms[0].key_arn, null)
-    module_kms_key_id  = try(module.kms[0].key_id, null)
-  }
+  raise_exist_kms_require     = var.is_enable_encryption && var.is_create_kms == false && var.exist_kms_key_arn == "" ? file("var.exist_kms_key_arn is required when var.is_enable_encryption == true and is_create_kms == false") : "pass"
+  raise_fifo_condition_failed = var.is_fifo_topic == false && var.is_content_based_deduplication ? file("var.is_content_based_deduplication can be true only when var.raise_fifo_condition_failed is false") : "pass"
 }
 
 /* -------------------------------------------------------------------------- */
@@ -91,17 +85,21 @@ module "kms" {
 
   additional_policies = var.additional_kms_key_policies
 
-  tags = merge(local.tags, { "Name" = format("%s-kms", local.name) })
+  tags = local.tags
 }
 
 /* -------------------------------------------------------------------------- */
 /*                                  SNS Topic                                 */
 /* -------------------------------------------------------------------------- */
 resource "aws_sns_topic" "this" {
-  name                                     = local.name                                             # /
-  display_name                             = var.display_name == "" ? local.name : var.display_name # /
-  policy                                   = data.aws_iam_policy_document.this.json                 # /
-  delivery_policy                          = var.delivery_policy
+  name                        = format("%s%s", local.name, var.is_fifo_topic ? ".fifo" : "") # /
+  display_name                = var.display_name == "" ? local.name : var.display_name       # /
+  policy                      = data.aws_iam_policy_document.this.json                       # /
+  kms_master_key_id           = local.kms_key_id                                             # /
+  delivery_policy             = var.delivery_policy
+  fifo_topic                  = var.is_fifo_topic                  # /
+  content_based_deduplication = var.is_content_based_deduplication # /
+
   application_success_feedback_role_arn    = var.application_success_feedback_role_arn
   application_success_feedback_sample_rate = var.application_success_feedback_sample_rate
   application_failure_feedback_role_arn    = var.application_failure_feedback_role_arn
@@ -114,9 +112,6 @@ resource "aws_sns_topic" "this" {
   sqs_success_feedback_role_arn            = var.sqs_success_feedback_role_arn
   sqs_success_feedback_sample_rate         = var.sqs_success_feedback_sample_rate
   sqs_failure_feedback_role_arn            = var.sqs_failure_feedback_role_arn
-  kms_master_key_id                        = local.kms_key_id # /
-  fifo_topic                               = var.fifo_topic
-  content_based_deduplication              = var.content_based_deduplication
 
-  tags = var.tags # /
+  tags = merge(local.tags, { "Name" = format("%s%s", local.name, var.is_fifo_topic ? ".fifo" : "") }) # /
 }
