@@ -28,6 +28,14 @@ variable "tags" {
   default     = {}
 }
 
+/* -------------------------------------------------------------------------- */
+/*                                     KMS                                    */
+/* -------------------------------------------------------------------------- */
+variable "additional_kms_key_policies" {
+  description = "Additional IAM policies block, input as data source. Ref: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document"
+  type        = list(string)
+  default     = []
+}
 
 
 
