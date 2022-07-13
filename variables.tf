@@ -70,6 +70,23 @@ variable "is_content_based_deduplication" {
   default     = false
 }
 
+variable "sns_permission_configuration" {
+  description = <<EOF
+  Enable thing to Publish to this service
+  principal  - (Required) The principal who is getting this permission e.g., s3.amazonaws.com, an AWS account ID, or any valid AWS service principal such as events.amazonaws.com or sns.amazonaws.com.
+  source_arn - (Optional) When the principal is an AWS service, the ARN of the specific resource within that service to grant permission to. Without this, any resource from
+  source_account - (Optional) This parameter is used for S3 and SES. The AWS account ID (without a hyphen) of the source owner.
+  EOF
+  type        = any
+  default     = {}
+}
+
+variable "additional_resource_policies" {
+  description = "Additional IAM policies block, input as data source. Ref: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document"
+  type        = list(string)
+  default     = []
+}
+
 variable "override_topic_deliver_policy" {
   description = "Overide the default deliver policy with jsonencode(map)"
   type        = string

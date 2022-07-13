@@ -20,4 +20,6 @@
         | `true`    | `false`   | "\<arn\>" | :heavy_check_mark: |                    | :heavy_check_mark: |                       |
         | `true`    | `true`    | ""        | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |                       |
         | `true`    | `true`    | "\<arn\>" | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | kms_arn will not used |
-    - Add FIFO and deduplication function to be toggle
+    - Add FIFO and de-duplication function to be toggle
+    - Add default deliver topic policy and ability to override it
+    - Add resource policy that can restrict to source arn, source account id. Moreover the ability to use custom resource policy as overriding

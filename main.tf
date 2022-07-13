@@ -1,5 +1,6 @@
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic
-# deliver policy -> https://docs.aws.amazon.com/sns/latest/dg/sns-message-delivery-retries.html
+# TODO Test with restrict permission with lambda
+# TODO Create subscriptino feature
 /* -------------------------------------------------------------------------- */
 /*                                   Locals                                   */
 /* -------------------------------------------------------------------------- */
@@ -47,8 +48,40 @@ locals {
 /* -------------------------------------------------------------------------- */
 /*                               Resource Policy                              */
 /* -------------------------------------------------------------------------- */
-# TODO make override and additional resource policy
-data "aws_iam_policy_document" "this" {
+data "aws_iam_policy_document" "additional_resource_policy" {
+  dynamic "statement" {
+    for_each = var.sns_permission_configuration
+
+    content {
+      sid    = format("AllowPublishFromAWSService-%s", replace(statement.key, "_", "-"))
+      effect = "Allow"
+      principals {
+        type        = "Service"
+        identifiers = [lookup(statement.value, "pricipal", null)]
+      }
+      actions = [
+        "SNS:Publish",
+      ]
+      resources = [local.this_sns_arn]
+      condition {
+        test     = "StringEquals"
+        variable = "AWS:SourceOwner"
+        values   = [lookup(statement.value, "source_account", data.aws_caller_identity.current.account_id)]
+      }
+      dynamic "condition" {
+        for_each = lookup(statement.value, "source_arn", null) == null ? [] : [true]
+
+        content {
+          test     = "ArnLike"
+          variable = "aws:SourceArn"
+          values   = [lookup(statement.value, "source_arn", null)]
+        }
+      }
+    }
+  }
+}
+
+data "aws_iam_policy_document" "owner_policy" {
   statement {
     sid    = "DefaultStatement"
     effect = "Allow"
@@ -78,6 +111,11 @@ data "aws_iam_policy_document" "this" {
       ]
     }
   }
+}
+
+data "aws_iam_policy_document" "this" {
+  source_policy_documents   = [data.aws_iam_policy_document.owner_policy.json, data.aws_iam_policy_document.additional_resource_policy.json]
+  override_policy_documents = var.additional_resource_policies
 }
 
 /* -------------------------------------------------------------------------- */
@@ -110,13 +148,13 @@ module "kms" {
 /*                                  SNS Topic                                 */
 /* -------------------------------------------------------------------------- */
 resource "aws_sns_topic" "this" {
-  name                        = local.name                                             # /
-  display_name                = var.display_name == "" ? local.name : var.display_name # /
-  policy                      = data.aws_iam_policy_document.this.json                 # /
-  kms_master_key_id           = local.kms_key_id                                       # /
-  delivery_policy             = local.deliver_policy                                   # /
-  fifo_topic                  = var.is_fifo_topic                                      # /
-  content_based_deduplication = var.is_content_based_deduplication                     # /
+  name                        = local.name
+  display_name                = var.display_name == "" ? local.name : var.display_name
+  policy                      = data.aws_iam_policy_document.this.json
+  kms_master_key_id           = local.kms_key_id
+  delivery_policy             = local.deliver_policy
+  fifo_topic                  = var.is_fifo_topic
+  content_based_deduplication = var.is_content_based_deduplication
 
   application_success_feedback_role_arn    = var.application_success_feedback_role_arn
   application_success_feedback_sample_rate = var.application_success_feedback_sample_rate
