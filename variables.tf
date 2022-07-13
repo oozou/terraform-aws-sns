@@ -31,11 +31,30 @@ variable "tags" {
 /* -------------------------------------------------------------------------- */
 /*                                     KMS                                    */
 /* -------------------------------------------------------------------------- */
+variable "is_enable_encryption" {
+  description = "Specifies whether the DB instance is encrypted"
+  type        = bool
+  default     = true
+}
+
+variable "is_create_kms" {
+  description = "Specifies whether kms will be created by this module or not"
+  type        = bool
+  default     = true
+}
+
+variable "exist_kms_key_arn" {
+  description = "The Amazon Resource Name (ARN) of the key."
+  type        = string
+  default     = ""
+}
+
 variable "additional_kms_key_policies" {
   description = "Additional IAM policies block, input as data source. Ref: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document"
   type        = list(string)
   default     = []
 }
+
 
 
 
