@@ -70,18 +70,10 @@ variable "is_content_based_deduplication" {
   default     = false
 }
 
-
-
-
-
-
-
-
-
-variable "delivery_policy" {
-  description = "The SNS delivery policy"
+variable "override_topic_deliver_policy" {
+  description = "Overide the default deliver policy with jsonencode(map)"
   type        = string
-  default     = null
+  default     = ""
 }
 
 variable "application_success_feedback_role_arn" {

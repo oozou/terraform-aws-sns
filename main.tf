@@ -7,11 +7,28 @@ data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
 locals {
-  name         = format("%s-%s-%s", var.prefix, var.environment, var.name)
-  this_sns_arn = "arn:aws:sns:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:${local.name}"
+  _name        = format("%s-%s-%s", var.prefix, var.environment, var.name)
+  name         = format("%s%s", local._name, var.is_fifo_topic ? ".fifo" : "")
+  this_sns_arn = format("arn:aws:sns:%s:%s:%s", data.aws_region.current.name, data.aws_caller_identity.current.account_id, local.name)
 
   kms_key_arn = var.is_enable_encryption ? var.is_create_kms ? module.kms[0].key_arn : var.exist_kms_key_arn : null
   kms_key_id  = var.is_enable_encryption ? replace(local.kms_key_arn, "arn:aws:kms:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:key/", "") : null
+
+  default_deliver_policy = {
+    http = {
+      defaultHealthyRetryPolicy = {
+        minDelayTarget     = 20,
+        maxDelayTarget     = 20,
+        numRetries         = 3,
+        numMaxDelayRetries = 0,
+        numNoDelayRetries  = 0,
+        numMinDelayRetries = 0,
+        backoffFunction    = "linear"
+      },
+      disableSubscriptionOverrides = false,
+    }
+  }
+  deliver_policy = var.override_topic_deliver_policy == "" ? jsonencode(local.default_deliver_policy) : var.override_topic_deliver_policy
 
   tags = merge(
     {
@@ -93,13 +110,13 @@ module "kms" {
 /*                                  SNS Topic                                 */
 /* -------------------------------------------------------------------------- */
 resource "aws_sns_topic" "this" {
-  name                        = format("%s%s", local.name, var.is_fifo_topic ? ".fifo" : "") # /
-  display_name                = var.display_name == "" ? local.name : var.display_name       # /
-  policy                      = data.aws_iam_policy_document.this.json                       # /
-  kms_master_key_id           = local.kms_key_id                                             # /
-  delivery_policy             = var.delivery_policy
-  fifo_topic                  = var.is_fifo_topic                  # /
-  content_based_deduplication = var.is_content_based_deduplication # /
+  name                        = local.name                                             # /
+  display_name                = var.display_name == "" ? local.name : var.display_name # /
+  policy                      = data.aws_iam_policy_document.this.json                 # /
+  kms_master_key_id           = local.kms_key_id                                       # /
+  delivery_policy             = local.deliver_policy                                   # /
+  fifo_topic                  = var.is_fifo_topic                                      # /
+  content_based_deduplication = var.is_content_based_deduplication                     # /
 
   application_success_feedback_role_arn    = var.application_success_feedback_role_arn
   application_success_feedback_sample_rate = var.application_success_feedback_sample_rate
@@ -114,5 +131,5 @@ resource "aws_sns_topic" "this" {
   sqs_success_feedback_sample_rate         = var.sqs_success_feedback_sample_rate
   sqs_failure_feedback_role_arn            = var.sqs_failure_feedback_role_arn
 
-  tags = merge(local.tags, { "Name" = format("%s%s", local.name, var.is_fifo_topic ? ".fifo" : "") }) # /
+  tags = merge(local.tags, { "Name" = local.name }) # /
 }
