@@ -58,6 +58,13 @@ variable "additional_kms_key_policies" {
 /* -------------------------------------------------------------------------- */
 /*                                     SNS                                    */
 /* -------------------------------------------------------------------------- */
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic_subscription#attributes-reference
+variable "subscription_configurations" {
+  description = "Subscription infomation"
+  type        = any
+  default     = {}
+}
+
 variable "is_fifo_topic" {
   description = "Boolean indicating whether or not to create a FIFO (first-in-first-out) topic"
   type        = bool

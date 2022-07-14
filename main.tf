@@ -15,6 +15,8 @@ locals {
   kms_key_arn = var.is_enable_encryption ? var.is_create_kms ? module.kms[0].key_arn : var.exist_kms_key_arn : null
   kms_key_id  = var.is_enable_encryption ? replace(local.kms_key_arn, "arn:aws:kms:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:key/", "") : null
 
+  sqs_allow_subscribe_policy = { for key, value in var.subscription_configurations : key => value if value.protocol == "sqs" }
+
   default_deliver_policy = {
     http = {
       defaultHealthyRetryPolicy = {
@@ -46,6 +48,74 @@ locals {
 }
 
 /* -------------------------------------------------------------------------- */
+/*                                   AWS KMS                                  */
+/* -------------------------------------------------------------------------- */
+module "kms" {
+  count = var.is_enable_encryption && var.is_create_kms ? 1 : 0
+
+  source = "git@github.com:oozou/terraform-aws-kms-key.git?ref=v1.0.0"
+
+  prefix      = var.prefix
+  environment = var.environment
+  name        = var.name
+
+  key_type             = "service"
+  description          = format("Used to encrypt data in sns %s", local.name)
+  append_random_suffix = true
+
+  service_key_info = {
+    caller_account_ids = [data.aws_caller_identity.current.account_id]
+    aws_service_names  = [format("sns.%s.amazonaws.com", data.aws_region.current.name)]
+  }
+
+  additional_policies = var.additional_kms_key_policies
+
+  tags = local.tags
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                  IAM Role                                  */
+/* -------------------------------------------------------------------------- */
+data "aws_iam_policy_document" "assume_role_policy" {
+  statement {
+    sid    = "AllowAWSToAssumeRole"
+    effect = "Allow"
+
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["cloudformation.amazonaws.com"]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "role_policy" {
+  statement {
+    sid    = "AllowCloudFormation"
+    effect = "Allow"
+    actions = [
+      "sns:Subscribe",
+      "sns:Unsubscribe"
+    ]
+    resources = [local.this_sns_arn]
+  }
+}
+
+resource "aws_iam_role" "this" {
+  name               = format("%s-role", replace(local.name, ",", "-"))
+  assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
+
+  tags = merge(local.tags, { "Name" : format("%s-role", replace(local.name, ",", "-")) })
+}
+
+resource "aws_iam_role_policy" "sns_subscription" {
+  role   = aws_iam_role.this.id
+  policy = data.aws_iam_policy_document.role_policy.json
+}
+
+
+/* -------------------------------------------------------------------------- */
 /*                               Resource Policy                              */
 /* -------------------------------------------------------------------------- */
 data "aws_iam_policy_document" "additional_resource_policy" {
@@ -61,9 +131,7 @@ data "aws_iam_policy_document" "additional_resource_policy" {
         identifiers = [lookup(statement.value, "pricipal", null)]
       }
 
-      actions = [
-        "SNS:Publish",
-      ]
+      actions   = ["SNS:Publish"]
       resources = [local.this_sns_arn]
 
       condition {
@@ -118,85 +186,12 @@ data "aws_iam_policy_document" "owner_policy" {
 }
 
 data "aws_iam_policy_document" "this" {
-  source_policy_documents   = [data.aws_iam_policy_document.owner_policy.json, data.aws_iam_policy_document.additional_resource_policy.json]
+  source_policy_documents = [
+    data.aws_iam_policy_document.owner_policy.json,
+    data.aws_iam_policy_document.additional_resource_policy.json,
+    data.aws_iam_policy_document.sqs_allow_subscribe_policy.json
+  ]
   override_policy_documents = var.additional_resource_policies
-}
-
-/* -------------------------------------------------------------------------- */
-/*                                   AWS KMS                                  */
-/* -------------------------------------------------------------------------- */
-module "kms" {
-  count = var.is_enable_encryption && var.is_create_kms ? 1 : 0
-
-  source = "git@github.com:oozou/terraform-aws-kms-key.git?ref=v1.0.0"
-
-  prefix      = var.prefix
-  environment = var.environment
-  name        = var.name
-
-  key_type             = "service"
-  description          = format("Used to encrypt data in sns %s", local.name)
-  append_random_suffix = true
-
-  service_key_info = {
-    caller_account_ids = [data.aws_caller_identity.current.account_id]
-    aws_service_names  = [format("sns.%s.amazonaws.com", data.aws_region.current.name)]
-  }
-
-  additional_policies = var.additional_kms_key_policies
-
-  tags = local.tags
-}
-
-/* -------------------------------------------------------------------------- */
-/*                                Subscription                                */
-/* -------------------------------------------------------------------------- */
-# SNS | SQS = aws_sns_topic_subscription in the same region as SNS
-# Account A SNS, Account B SQS = aws_sns_topic_subscription must be the same provider as SQS
-# If SNS and SQS queue are in different AWS accounts and different AWS regions,
-# the subscription needs to be initiated from the account with the SQS queue but in the region of the SNS topic.
-##  TODO Find validation for this
-
-
-/* -------------------------------------------------------------------------- */
-/*                                  IAM Role                                  */
-/* -------------------------------------------------------------------------- */
-data "aws_iam_policy_document" "assume_role_policy" {
-  statement {
-    sid    = "AllowAWSToAssumeRole"
-    effect = "Allow"
-
-    actions = ["sts:AssumeRole"]
-
-    principals {
-      type        = "Service"
-      identifiers = ["cloudformation.amazonaws.com"]
-    }
-  }
-}
-
-data "aws_iam_policy_document" "role_policy" {
-  statement {
-    sid    = "AllowCloudFormation"
-    effect = "Allow"
-    actions = [
-      "sns:Subscribe",
-      "sns:Unsubscribe"
-    ]
-    resources = [local.this_sns_arn]
-  }
-}
-
-resource "aws_iam_role" "this" {
-  name               = format("%s-role", replace(local.name, ",", "-"))
-  assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
-
-  tags = merge(local.tags, { "Name" : format("%s-role", replace(local.name, ",", "-")) })
-}
-
-resource "aws_iam_role_policy" "sns_subscription" {
-  role   = aws_iam_role.this.id
-  policy = data.aws_iam_policy_document.role_policy.json
 }
 
 /* -------------------------------------------------------------------------- */
