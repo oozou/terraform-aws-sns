@@ -40,10 +40,24 @@ module "sns" {
     }
   }
 
+  subscription_configurations = {
+    sqs_from_my_account = {
+      protocol = "sqs"
+      arn      = "arn:aws:sqs:ap-southeast-1:557291035693:manual-sub"
+    }
+    sqs_from_my_internal_account = {
+      protocol = "sqs"
+      arn      = "arn:aws:sqs:ap-southeast-1:562563527952:manual-sub"
+    }
+    ssss = {
+      protocol = "email"
+    }
+  }
+
   # KMS
-  is_enable_encryption = true               # Default is true
-  is_create_kms        = false              # Default is true
-  exist_kms_key_arn    = module.kms.key_arn # Default is "", require when is_create_kms is false
+  is_enable_encryption = true # Default is true
+  is_create_kms        = true # Default is true
+  exist_kms_key_arn    = ""   # Default is "", require when is_create_kms is false
 
   # Message order
   is_fifo_topic                  = false # Default is false
