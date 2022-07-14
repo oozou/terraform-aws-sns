@@ -35,8 +35,8 @@ module "sns" {
     }
     api_gateway_from_another_account = {
       pricipal       = "apigateway.amazonaws.com"
-      source_arn     = "arn:aws:execute-api:ap-southeast-1:562563527952:q6pwa6wgr6/*/*/"
-      source_account = "557291035693"
+      source_arn     = "arn:aws:execute-api:ap-southeast-1:557291115693:q6pwa6wgr6/*/*/"
+      source_account = "557291115693"
     }
   }
 

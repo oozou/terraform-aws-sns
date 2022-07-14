@@ -55,19 +55,23 @@ data "aws_iam_policy_document" "additional_resource_policy" {
     content {
       sid    = format("AllowPublishFromAWSService-%s", replace(statement.key, "_", "-"))
       effect = "Allow"
+
       principals {
         type        = "Service"
         identifiers = [lookup(statement.value, "pricipal", null)]
       }
+
       actions = [
         "SNS:Publish",
       ]
       resources = [local.this_sns_arn]
+
       condition {
         test     = "StringEquals"
         variable = "AWS:SourceOwner"
         values   = [lookup(statement.value, "source_account", data.aws_caller_identity.current.account_id)]
       }
+
       dynamic "condition" {
         for_each = lookup(statement.value, "source_arn", null) == null ? [] : [true]
 
@@ -145,6 +149,57 @@ module "kms" {
 }
 
 /* -------------------------------------------------------------------------- */
+/*                                Subscription                                */
+/* -------------------------------------------------------------------------- */
+# SNS | SQS = aws_sns_topic_subscription in the same region as SNS
+# Account A SNS, Account B SQS = aws_sns_topic_subscription must be the same provider as SQS
+# If SNS and SQS queue are in different AWS accounts and different AWS regions,
+# the subscription needs to be initiated from the account with the SQS queue but in the region of the SNS topic.
+##  TODO Find validation for this
+
+
+/* -------------------------------------------------------------------------- */
+/*                                  IAM Role                                  */
+/* -------------------------------------------------------------------------- */
+data "aws_iam_policy_document" "assume_role_policy" {
+  statement {
+    sid    = "AllowAWSToAssumeRole"
+    effect = "Allow"
+
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["cloudformation.amazonaws.com"]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "role_policy" {
+  statement {
+    sid    = "AllowCloudFormation"
+    effect = "Allow"
+    actions = [
+      "sns:Subscribe",
+      "sns:Unsubscribe"
+    ]
+    resources = [local.this_sns_arn]
+  }
+}
+
+resource "aws_iam_role" "this" {
+  name               = format("%s-role", replace(local.name, ",", "-"))
+  assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
+
+  tags = merge(local.tags, { "Name" : format("%s-role", replace(local.name, ",", "-")) })
+}
+
+resource "aws_iam_role_policy" "sns_subscription" {
+  role   = aws_iam_role.this.id
+  policy = data.aws_iam_policy_document.role_policy.json
+}
+
+/* -------------------------------------------------------------------------- */
 /*                                  SNS Topic                                 */
 /* -------------------------------------------------------------------------- */
 resource "aws_sns_topic" "this" {
@@ -169,5 +224,5 @@ resource "aws_sns_topic" "this" {
   sqs_success_feedback_sample_rate         = var.sqs_success_feedback_sample_rate
   sqs_failure_feedback_role_arn            = var.sqs_failure_feedback_role_arn
 
-  tags = merge(local.tags, { "Name" = local.name }) # /
+  tags = merge(local.tags, { "Name" = local.name })
 }
