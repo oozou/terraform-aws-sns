@@ -23,3 +23,11 @@
     - Add FIFO and de-duplication function to be toggle
     - Add default deliver topic policy and ability to override it
     - Add resource policy that can restrict to source arn, source account id. Moreover the ability to use custom resource policy as overriding
+    - Add auto create subscription policies for SQS service to SNS
+        - For now no subscription are create inside this module (See Enhancement)
+
+- Enhancement
+    - Add auto create subscription policies for SNS service
+        - There is no possibility to construct the resource `aws_sns_topic_subscription` within the module since AWS provider requirements depend on the region and account of both SQS and SNS.
+    - Make more generic for policy creation (use existing policies) 
+        - My cmt -> Over Engineer

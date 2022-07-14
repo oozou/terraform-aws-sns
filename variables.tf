@@ -65,6 +65,25 @@ variable "subscription_configurations" {
   default     = {}
 }
 
+variable "default_deliver_policy" {
+  description = "The default deliver policy for SNS"
+  type        = any
+  default = {
+    http = {
+      defaultHealthyRetryPolicy = {
+        minDelayTarget     = 20,
+        maxDelayTarget     = 20,
+        numRetries         = 3,
+        numMaxDelayRetries = 0,
+        numNoDelayRetries  = 0,
+        numMinDelayRetries = 0,
+        backoffFunction    = "linear"
+      },
+      disableSubscriptionOverrides = false,
+    }
+  }
+}
+
 variable "is_fifo_topic" {
   description = "Boolean indicating whether or not to create a FIFO (first-in-first-out) topic"
   type        = bool

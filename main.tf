@@ -1,6 +1,5 @@
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic
 # TODO Test with restrict permission with lambda
-# TODO Create subscriptino feature
 /* -------------------------------------------------------------------------- */
 /*                                   Locals                                   */
 /* -------------------------------------------------------------------------- */
@@ -17,21 +16,7 @@ locals {
 
   sqs_allow_subscribe_policy = { for key, value in var.subscription_configurations : key => value if value.protocol == "sqs" }
 
-  default_deliver_policy = {
-    http = {
-      defaultHealthyRetryPolicy = {
-        minDelayTarget     = 20,
-        maxDelayTarget     = 20,
-        numRetries         = 3,
-        numMaxDelayRetries = 0,
-        numNoDelayRetries  = 0,
-        numMinDelayRetries = 0,
-        backoffFunction    = "linear"
-      },
-      disableSubscriptionOverrides = false,
-    }
-  }
-  deliver_policy = var.override_topic_deliver_policy == "" ? jsonencode(local.default_deliver_policy) : var.override_topic_deliver_policy
+  deliver_policy = var.override_topic_deliver_policy == "" ? jsonencode(var.default_deliver_policy) : var.override_topic_deliver_policy
 
   tags = merge(
     {
@@ -114,6 +99,56 @@ resource "aws_iam_role_policy" "sns_subscription" {
   policy = data.aws_iam_policy_document.role_policy.json
 }
 
+/* -------------------------------------------------------------------------- */
+/*                                Subscription                                */
+/* -------------------------------------------------------------------------- */
+# SNS | SQS = aws_sns_topic_subscription in the same region as SNS
+# Account A SNS, Account B SQS = aws_sns_topic_subscription must be the same provider as SQS
+# If SNS and SQS queue are in different AWS accounts and different AWS regions,
+# the subscription needs to be initiated from the account with the SQS queue but in the region of the SNS topic.
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic_subscription#attributes-reference
+## TODO DO validation for this later (next version)
+/* ----------------------------------- SQS ---------------------------------- */
+data "aws_iam_policy_document" "sqs_allow_subscribe_policy" {
+  dynamic "statement" {
+    for_each = local.sqs_allow_subscribe_policy
+
+    content {
+      sid = format("AllowToSubsribe-%s", replace(statement.key, "_", "-"))
+
+      principals {
+        type        = "AWS"
+        identifiers = ["*"]
+      }
+
+      effect = "Allow"
+      actions = [
+        "SNS:Subscribe",
+        "SNS:Receive",
+      ]
+      resources = [local.this_sns_arn]
+
+      condition {
+        test     = "StringLike"
+        variable = "SNS:Endpoint"
+        values = [
+          lookup(statement.value, "arn", null)
+        ]
+      }
+    }
+  }
+}
+
+# ANCHOR May be we have to used this one outside module ??
+# resource "aws_sns_topic_subscription" "sns_topic" {
+#   for_each = var.sqs_allow_subscribe_policy
+#   iterator = subscription
+
+#   topic_arn = local.this_sns_arn
+#   protocol  = lookup(subscription.value, "protocol", null)
+#   endpoint  = lookup(subscription.value, "arn", null)
+#   provider  = lookup(subscription.value, "provider", null)
+# }
 
 /* -------------------------------------------------------------------------- */
 /*                               Resource Policy                              */
