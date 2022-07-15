@@ -23,11 +23,15 @@
     - Add FIFO and de-duplication function to be toggle
     - Add default deliver topic policy and ability to override it
     - Add resource policy that can restrict to source arn, source account id. Moreover the ability to use custom resource policy as overriding
-    - Add auto create subscription policies for SQS service to SNS
-        - For now no subscription are create inside this module (See Enhancement)
+    - Add auto create subscription policies for SQS service to allow subscription to SNS
+        - For now `no` subscription (resource) are create inside this module (See Enhancement)
+
 
 - Enhancement
-    - Add auto create subscription policies for SNS service
-        - There is no possibility to construct the resource `aws_sns_topic_subscription` within the module since AWS provider requirements depend on the region and account of both SQS and SNS.
     - Make more generic for policy creation (use existing policies) 
         - My cmt -> Over Engineer
+    - Add auto create subscription policies for SNS service
+        - There is no possibility to construct the resource `aws_sns_topic_subscription` within the module since AWS provider requirements depend on the region and account of both SQS and SNS.
+    - Need test for more service (sms, lambda, firehose, and application, ...) [See available protocol.](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic_subscription#protocol)
+        - This version didn't test with all service; only sqs, http(s), email and email-json are tested)
+        - If new protocol cannot create resource `aws_sns_topic_subscription` inside this module, you can only update policy to allow subscribe from that protocol inside `local.only_update_resource_policy_protocols`

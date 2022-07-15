@@ -113,7 +113,7 @@ variable "additional_resource_policies" {
   default     = []
 }
 
-variable "override_topic_deliver_policy" {
+variable "override_topic_delivery_policy" {
   description = "Overide the default deliver policy with jsonencode(map)"
   type        = string
   default     = ""

@@ -1,5 +1,3 @@
-# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic
-# TODO Test with restrict permission with lambda
 /* -------------------------------------------------------------------------- */
 /*                                   Locals                                   */
 /* -------------------------------------------------------------------------- */
@@ -14,9 +12,14 @@ locals {
   kms_key_arn = var.is_enable_encryption ? var.is_create_kms ? module.kms[0].key_arn : var.exist_kms_key_arn : null
   kms_key_id  = var.is_enable_encryption ? replace(local.kms_key_arn, "arn:aws:kms:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:key/", "") : null
 
-  sqs_allow_subscribe_policy = { for key, value in var.subscription_configurations : key => value if value.protocol == "sqs" }
+  only_update_resource_policy_protocols = ["sqs"]
+  allow_subscribe_policy                = { for key, value in var.subscription_configurations : key => value if contains(local.only_update_resource_policy_protocols, value.protocol) }
 
-  deliver_policy = var.override_topic_deliver_policy == "" ? jsonencode(var.default_deliver_policy) : var.override_topic_deliver_policy
+  _email_subscription = { for key, value in var.subscription_configurations : key => value if contains(["email", "email-json"], value.protocol) }
+  email_subscription  = { for idx, value in flatten([for topic, config in local._email_subscription : [for address in config.addresses : merge({ "endpoint" = address, "topic" = topic }, { for key, value in config : key => value if key != "addresses" })]]) : format("%s_%s", value.topic, idx) => value }
+  subscription        = merge(local.email_subscription, { for key, value in var.subscription_configurations : key => value if !contains(concat(local.only_update_resource_policy_protocols, ["email", "email-json"]), value.protocol) })
+
+  deliver_policy = var.override_topic_delivery_policy == "" ? jsonencode(var.default_deliver_policy) : var.override_topic_delivery_policy
 
   tags = merge(
     {
@@ -109,9 +112,9 @@ resource "aws_iam_role_policy" "sns_subscription" {
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic_subscription#attributes-reference
 ## TODO DO validation for this later (next version)
 /* ----------------------------------- SQS ---------------------------------- */
-data "aws_iam_policy_document" "sqs_allow_subscribe_policy" {
+data "aws_iam_policy_document" "allow_subscribe_policy" {
   dynamic "statement" {
-    for_each = local.sqs_allow_subscribe_policy
+    for_each = local.allow_subscribe_policy
 
     content {
       sid = format("AllowToSubsribe-%s", replace(statement.key, "_", "-"))
@@ -132,23 +135,26 @@ data "aws_iam_policy_document" "sqs_allow_subscribe_policy" {
         test     = "StringLike"
         variable = "SNS:Endpoint"
         values = [
-          lookup(statement.value, "arn", null)
+          lookup(statement.value, "endpoint", null)
         ]
       }
     }
   }
 }
 
-# ANCHOR May be we have to used this one outside module ??
-# resource "aws_sns_topic_subscription" "sns_topic" {
-#   for_each = var.sqs_allow_subscribe_policy
-#   iterator = subscription
+resource "aws_sns_topic_subscription" "this" {
+  for_each = local.subscription
 
-#   topic_arn = local.this_sns_arn
-#   protocol  = lookup(subscription.value, "protocol", null)
-#   endpoint  = lookup(subscription.value, "arn", null)
-#   provider  = lookup(subscription.value, "provider", null)
-# }
+  topic_arn              = local.this_sns_arn
+  protocol               = lookup(each.value, "protocol", null)
+  endpoint               = lookup(each.value, "endpoint", null)
+  delivery_policy        = lookup(each.value, "delivery_policy", null)
+  redrive_policy         = lookup(each.value, "redrive_policy", null)
+  filter_policy          = lookup(each.value, "filter_policy", null)
+  subscription_role_arn  = lookup(each.value, "subscription_role_arn", null)
+  raw_message_delivery   = lookup(each.value, "raw_message_delivery", null)
+  endpoint_auto_confirms = lookup(each.value, "endpoint_auto_confirms", null)
+}
 
 /* -------------------------------------------------------------------------- */
 /*                               Resource Policy                              */
@@ -224,7 +230,7 @@ data "aws_iam_policy_document" "this" {
   source_policy_documents = [
     data.aws_iam_policy_document.owner_policy.json,
     data.aws_iam_policy_document.additional_resource_policy.json,
-    data.aws_iam_policy_document.sqs_allow_subscribe_policy.json
+    data.aws_iam_policy_document.allow_subscribe_policy.json
   ]
   override_policy_documents = var.additional_resource_policies
 }

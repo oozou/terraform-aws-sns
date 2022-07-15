@@ -67,3 +67,47 @@ module "sns" {
 }
 
 ```
+
+- The above subscription will create with follow configuration
+
+```terraform
+local.subscription = {
+    "protocol" = "https"
+  "connect_to_custom_httpss" = {
+    "endpoint" = "https://www.google.com"
+  }
+  "email_0" = {
+    "delivery_policy" = jsonencode(var.override_topic_delivery_policy)
+    "protocol" = "email"
+    "endpoint" = "sedthawut.home@gmail.com"
+    "filter_policy" = jsonencode(var.dev_filter_polciy)
+    "topic" = "email"
+  }
+  "email_1" = {
+    "delivery_policy" = jsonencode(var.override_topic_delivery_policy)
+    "protocol" = "email"
+    "endpoint" = "m.s@oozou.com"
+    "filter_policy" = jsonencode(var.dev_filter_polciy)
+    "topic" = "email"
+  }
+  "email_2" = {
+    "delivery_policy" = jsonencode(var.override_topic_delivery_policy)
+    "protocol" = "email"
+    "endpoint" = "art.r@oozou.com"
+    "filter_policy" = jsonencode(var.dev_filter_polciy)
+    "topic" = "email"
+  }
+  "email_admin_3" = {
+    "protocol" = "email"
+    "endpoint" = "sedthawut.organize@gmail.com"
+    "filter_policy" = jsonencode(var.admin_filter_polciy)
+    "topic" = "email_admin"
+  }
+  "email_admin_4" = {
+    "protocol" = "email"
+    "endpoint" = "big@oozou.com"
+    "filter_policy" = jsonencode(var.admin_filter_polciy)
+    "topic" = "email_admin"
+  }
+}
+```

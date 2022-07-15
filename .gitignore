@@ -1,5 +1,4 @@
 .DS_Store
-example/
 
 .terraform.lock.hcl
 
