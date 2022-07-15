@@ -14,9 +14,9 @@ locals {
 module "sns" {
   source = "git@github.com:oozou/terraform-aws-sns.git?ref=<version>"
 
-  prefix       = "oozou"
-  environment  = "devops"
-  name         = "cms"
+  prefix       = var.generics_info["prefix"]
+  environment  = var.generics_info["environment"]
+  name         = var.generics_info["name"]
   display_name = "God of Gor Don" # Default is "", name appear with message; no affect to resource arn
 
   # https://docs.aws.amazon.com/sns/latest/dg/sns-message-delivery-retries.html
