@@ -7,8 +7,8 @@ data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
 locals {
-  _name = format("%s-%s-%s", var.generics_info["prefix"], var.generics_info["environment"], var.generics_info["name"])
-  name  = format("%s%s", local._name, false ? ".fifo" : "")
+  draft_name = format("%s-%s-%s", var.generics_info["prefix"], var.generics_info["environment"], var.generics_info["name"])
+  name  = format("%s%s", local.draft_name, false ? ".fifo" : "")
 
   this_sns_arn = format("arn:aws:sns:%s:%s:%s", data.aws_region.current.name, data.aws_caller_identity.current.account_id, local.name)
   sqs_arn      = format("arn:aws:sqs:%s:%s:%s", data.aws_region.current.name, data.aws_caller_identity.current.account_id, local.name)
