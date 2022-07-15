@@ -6,13 +6,13 @@
 module "sns" {
   source = "git@github.com:oozou/terraform-aws-sns.git?ref=<version>"
 
-  prefix       = var.generics_info["prefix"]
-  environment  = var.generics_info["environment"]
-  name         = var.generics_info["name"]
+  prefix       = "oozou"
+  environment  = "devops"
+  name         = "sns-to-the-moon"
   display_name = "God of Gor Don" # Default is "", name appear with message; no affect to resource arn
 
   # https://docs.aws.amazon.com/sns/latest/dg/sns-message-delivery-retries.html
-  override_topic_deliver_policy = jsonencode({ # Default is "", use to override defualt topic deliver policy
+  override_topic_delivery_policy = jsonencode({ # Default is "", use to override defualt topic deliver policy
     http = {
       defaultHealthyRetryPolicy = {
         minDelayTarget     = 10,
@@ -35,22 +35,31 @@ module "sns" {
     }
     api_gateway_from_another_account = {
       pricipal       = "apigateway.amazonaws.com"
-      source_arn     = "arn:aws:execute-api:ap-southeast-1:557291115693:q6pwa6wgr6/*/*/"
+      source_arn     = "arn:aws:execute-api:ap-southeast-1:557291115112:q6pwa6wgr6/*/*/"
       source_account = "557291115693"
     }
   }
 
+  # Send message to
   subscription_configurations = {
     sqs_from_my_account = {
       protocol = "sqs"
-      arn      = "arn:aws:sqs:ap-southeast-1:557291035693:manual-sub"
+      endpoint = aws_sqs_queue.sqs.arn
     }
-    sqs_from_my_internal_account = {
-      protocol = "sqs"
-      arn      = "arn:aws:sqs:ap-southeast-1:562563527952:manual-sub"
+    email = {
+      protocol        = "email"
+      addresses       = ["sedthawut.home@gmail.com", "m.s@oozou.com", "art.r@oozou.com"]
+      delivery_policy = jsonencode(var.override_topic_delivery_policy)
+      filter_policy   = jsonencode(var.dev_filter_polciy)
     }
-    ssss = {
-      protocol = "email"
+    email_admin = {
+      protocol      = "email"
+      addresses     = ["sedthawut.org@gmail.com", "big@oozou.com"]
+      filter_policy = jsonencode(var.admin_filter_polciy)
+    }
+    connect_to_custom_httpss = {
+      protocol = "https"
+      endpoint = "https://www.google.com"
     }
   }
 
@@ -63,9 +72,8 @@ module "sns" {
   is_fifo_topic                  = false # Default is false
   is_content_based_deduplication = false # Default is false, can change when is_fifo_topic is true
 
-  tags = var.generics_info["custom_tags"]
+  tags = { "Workspace" = "xxx-yyy-zzz" }
 }
-
 ```
 
 - The above subscription will create with follow configuration
