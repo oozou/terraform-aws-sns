@@ -3,6 +3,9 @@
 ## Usage
 
 ```terraform
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
+
 locals {
   _name = format("%s-%s-%s", var.generics_info["prefix"], var.generics_info["environment"], var.generics_info["name"])
   name  = format("%s%s", local._name, false ? ".fifo" : "")
