@@ -32,6 +32,7 @@
         - My cmt -> Over Engineer
     - Add auto create subscription policies for SNS service
         - There is no possibility to construct the resource `aws_sns_topic_subscription` within the module since AWS provider requirements depend on the region and account of both SQS and SNS.
-    - Need test for more service (sms, lambda, firehose, and application, ...) [See available protocol.](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic_subscription#protocol)
-        - This version didn't test with all service; only sqs, http(s), email and email-json are tested)
-        - If new protocol cannot create resource `aws_sns_topic_subscription` inside this module, you can only update policy to allow subscribe from that protocol inside `local.only_update_resource_policy_protocols`
+    - Need test for service expansion (sms, lambda, firehose, and application, ...) [See available protocol.](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic_subscription#protocol)
+        - This version has only been tested with sqs, http(s), email, and email-json services.
+        - If new protocol cannot create resource `aws_sns_topic_subscription` within this module, you can only update policy to permit subscribe from that protocol within `local.only_update_resource_policy_protocols`
+    - Needs Improvement: When utilizing with SQS, you must still apply twice
