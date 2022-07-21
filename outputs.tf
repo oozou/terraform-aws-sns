@@ -17,3 +17,8 @@ output "sns_topic_owner" {
   description = "OWNER of SNS topic"
   value       = aws_sns_topic.this.owner
 }
+
+output "subscription" {
+  description = "Debug for subscription information"
+  value       = try(local.subscription, {})
+}

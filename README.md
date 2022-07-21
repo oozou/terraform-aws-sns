@@ -1,25 +1,19 @@
 # terraform-aws-sns
 
-## Usage
+## Usage sns with sqs and email
 
 ```terraform
-data "aws_caller_identity" "this" {}
-data "aws_region" "this" {}
-
 locals {
-  draft_name = format("%s-%s-%s", var.generics_info["prefix"], var.generics_info["environment"], var.generics_info["name"])
-  name  = format("%s%s", local.draft_name, false ? ".fifo" : "")
-
-  this_sns_arn = format("arn:aws:sns:%s:%s:%s", data.aws_region.this.name, data.aws_caller_identity.this.account_id, local.name)
-  sqs_arn      = format("arn:aws:sqs:%s:%s:%s", data.aws_region.this.name, data.aws_caller_identity.this.account_id, local.name)
+  _name = format("%s-%s-%s", var.generic_info["prefix"], var.generic_info["environment"], var.generic_info["name"])
+  name  = format("%s%s", local._name, false ? ".fifo" : "")
 }
 
 module "sns" {
-  source = "git@github.com:oozou/terraform-aws-sns.git?ref=<version>"
+  source = "../terraform-aws-sns"
 
-  prefix       = var.generics_info["prefix"]
-  environment  = var.generics_info["environment"]
-  name         = var.generics_info["name"]
+  prefix       = var.generic_info["prefix"]
+  environment  = var.generic_info["environment"]
+  name         = var.generic_info["name"]
   display_name = "God of Gor Don" # Default is "", name appear with message; no affect to resource arn
 
   # https://docs.aws.amazon.com/sns/latest/dg/sns-message-delivery-retries.html
@@ -55,17 +49,17 @@ module "sns" {
   subscription_configurations = {
     sqs_from_my_account = {
       protocol = "sqs"
-      endpoint = local.sqs_arn
+      endpoint = aws_sqs_queue.sqs.arn
     }
     email = {
       protocol        = "email"
       addresses       = ["sedthawut.home@gmail.com", "m.s@oozou.com", "art.r@oozou.com"]
-      delivery_policy = jsonencode(var.override_topic_delivery_policy) # To override the topic delivery policy
-      filter_policy   = jsonencode(var.dev_filter_polciy)              # To set filter policy for this subscription
+      delivery_policy = jsonencode(var.override_topic_delivery_policy)
+      filter_policy   = jsonencode(var.dev_filter_polciy)
     }
     email_admin = {
       protocol      = "email"
-      addresses     = ["sedthawut.org@gmail.com", "big@oozou.com"]
+      addresses     = ["big@oozou.com"]
       filter_policy = jsonencode(var.admin_filter_polciy)
     }
     connect_to_custom_httpss = {
@@ -83,7 +77,7 @@ module "sns" {
   is_fifo_topic                  = false # Default is false
   is_content_based_deduplication = false # Default is false, can change when is_fifo_topic is true
 
-  tags = var.generics_info["custom_tags"]
+  tags = var.generic_info["custom_tags"]
 }
 
 data "aws_iam_policy_document" "sqs_queue_policy" {
@@ -98,12 +92,15 @@ data "aws_iam_policy_document" "sqs_queue_policy" {
       "SQS:SendMessage",
     ]
     resources = [
-      local.sqs_arn # Artifically created by format() string
+      # Artifically created by format() string
+      format("arn:aws:sqs:%s:%s:%s", data.aws_region.this.name, data.aws_caller_identity.this.account_id, local.name)
     ]
     condition {
       test     = "ArnEquals"
       variable = "aws:SourceArn"
-      values   = [local.this_sns_arn]
+      values = [
+        format("arn:aws:sns:%s:%s:%s", data.aws_region.this.name, data.aws_caller_identity.this.account_id, local.name)
+      ]
     }
   }
 }
@@ -116,13 +113,13 @@ resource "aws_sqs_queue" "sqs" {
   message_retention_seconds = 86400
   receive_wait_time_seconds = 10
 
-  tags = var.generics_info["custom_tags"]
+  tags = var.generic_info["custom_tags"]
 }
 
 resource "aws_sns_topic_subscription" "sns_topic" {
-  topic_arn = local.this_sns_arn
+  topic_arn = module.sns.sns_topic_arn
   protocol  = "sqs"
-  endpoint  = local.sqs_arn
+  endpoint  = aws_sqs_queue.sqs.arn
 }
 
 ```
@@ -157,12 +154,6 @@ local.subscription = {
     "topic" = "email"
   }
   "email_admin_3" = {
-    "protocol" = "email"
-    "endpoint" = "sedthawut.organize@gmail.com"
-    "filter_policy" = jsonencode(var.admin_filter_polciy)
-    "topic" = "email_admin"
-  }
-  "email_admin_4" = {
     "protocol" = "email"
     "endpoint" = "big@oozou.com"
     "filter_policy" = jsonencode(var.admin_filter_polciy)
@@ -243,10 +234,11 @@ local.subscription = {
 
 ## Outputs
 
-| Name                                                                                  | Description        |
-|---------------------------------------------------------------------------------------|--------------------|
-| <a name="output_sns_topic_arn"></a> [sns\_topic\_arn](#output\_sns\_topic\_arn)       | ARN of SNS topic   |
-| <a name="output_sns_topic_id"></a> [sns\_topic\_id](#output\_sns\_topic\_id)          | ID of SNS topic    |
-| <a name="output_sns_topic_name"></a> [sns\_topic\_name](#output\_sns\_topic\_name)    | NAME of SNS topic  |
-| <a name="output_sns_topic_owner"></a> [sns\_topic\_owner](#output\_sns\_topic\_owner) | OWNER of SNS topic |
+| Name                                                                                  | Description                        |
+|---------------------------------------------------------------------------------------|------------------------------------|
+| <a name="output_sns_topic_arn"></a> [sns\_topic\_arn](#output\_sns\_topic\_arn)       | ARN of SNS topic                   |
+| <a name="output_sns_topic_id"></a> [sns\_topic\_id](#output\_sns\_topic\_id)          | ID of SNS topic                    |
+| <a name="output_sns_topic_name"></a> [sns\_topic\_name](#output\_sns\_topic\_name)    | NAME of SNS topic                  |
+| <a name="output_sns_topic_owner"></a> [sns\_topic\_owner](#output\_sns\_topic\_owner) | OWNER of SNS topic                 |
+| <a name="output_subscription"></a> [subscription](#output\_subscription)              | Debug for subscription information |
 <!-- END_TF_DOCS -->
