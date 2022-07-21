@@ -3,15 +3,15 @@
 ## Usage
 
 ```terraform
-data "aws_caller_identity" "current" {}
-data "aws_region" "current" {}
+data "aws_caller_identity" "this" {}
+data "aws_region" "this" {}
 
 locals {
   draft_name = format("%s-%s-%s", var.generics_info["prefix"], var.generics_info["environment"], var.generics_info["name"])
   name  = format("%s%s", local.draft_name, false ? ".fifo" : "")
 
-  this_sns_arn = format("arn:aws:sns:%s:%s:%s", data.aws_region.current.name, data.aws_caller_identity.current.account_id, local.name)
-  sqs_arn      = format("arn:aws:sqs:%s:%s:%s", data.aws_region.current.name, data.aws_caller_identity.current.account_id, local.name)
+  this_sns_arn = format("arn:aws:sns:%s:%s:%s", data.aws_region.this.name, data.aws_caller_identity.this.account_id, local.name)
+  sqs_arn      = format("arn:aws:sqs:%s:%s:%s", data.aws_region.this.name, data.aws_caller_identity.this.account_id, local.name)
 }
 
 module "sns" {
@@ -199,14 +199,14 @@ local.subscription = {
 | [aws_iam_role_policy.sns_subscription](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy)                      | resource    |
 | [aws_sns_topic.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic)                                              | resource    |
 | [aws_sns_topic_subscription.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic_subscription)                    | resource    |
-| [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity)                            | data source |
+| [aws_caller_identity.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity)                               | data source |
 | [aws_iam_policy_document.additional_resource_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_iam_policy_document.allow_subscribe_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document)     | data source |
 | [aws_iam_policy_document.assume_role_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document)         | data source |
 | [aws_iam_policy_document.owner_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document)               | data source |
 | [aws_iam_policy_document.role_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document)                | data source |
 | [aws_iam_policy_document.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document)                       | data source |
-| [aws_region.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region)                                              | data source |
+| [aws_region.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region)                                                 | data source |
 
 ## Inputs
 

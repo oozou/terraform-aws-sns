@@ -1,23 +1,24 @@
 /* -------------------------------------------------------------------------- */
 /*                                   Locals                                   */
 /* -------------------------------------------------------------------------- */
-data "aws_caller_identity" "current" {}
-data "aws_region" "current" {}
+data "aws_caller_identity" "this" {}
+data "aws_region" "this" {}
 
 locals {
-  _name        = format("%s-%s-%s", var.prefix, var.environment, var.name)
-  name         = format("%s%s", local._name, var.is_fifo_topic ? ".fifo" : "")
-  this_sns_arn = format("arn:aws:sns:%s:%s:%s", data.aws_region.current.name, data.aws_caller_identity.current.account_id, local.name)
+  draft_name   = format("%s-%s-%s", var.prefix, var.environment, var.name)
+  name         = format("%s%s", local.draft_name, var.is_fifo_topic ? ".fifo" : "")
+  this_sns_arn = format("arn:aws:sns:%s:%s:%s", data.aws_region.this.name, data.aws_caller_identity.this.account_id, local.name)
 
   kms_key_arn = var.is_enable_encryption ? var.is_create_kms ? module.kms[0].key_arn : var.exist_kms_key_arn : null
-  kms_key_id  = var.is_enable_encryption ? replace(local.kms_key_arn, "arn:aws:kms:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:key/", "") : null
+  kms_key_id  = var.is_enable_encryption ? replace(local.kms_key_arn, "arn:aws:kms:${data.aws_region.this.name}:${data.aws_caller_identity.this.account_id}:key/", "") : null
 
   only_update_resource_policy_protocols = ["sqs"]
   allow_subscribe_policy                = { for key, value in var.subscription_configurations : key => value if contains(local.only_update_resource_policy_protocols, value.protocol) }
 
-  _email_subscription = { for key, value in var.subscription_configurations : key => value if contains(["email", "email-json"], value.protocol) }
-  email_subscription  = { for idx, value in flatten([for topic, config in local._email_subscription : [for address in config.addresses : merge({ "endpoint" = address, "topic" = topic }, { for key, value in config : key => value if key != "addresses" })]]) : format("%s_%s", value.topic, idx) => value }
-  subscription        = merge(local.email_subscription, { for key, value in var.subscription_configurations : key => value if !contains(concat(local.only_update_resource_policy_protocols, ["email", "email-json"]), value.protocol) })
+  email_parsing      = { for key, value in var.subscription_configurations : key => value if contains(["email", "email-json"], value.protocol) }
+  email_subscription = { for idx, value in flatten([for topic, config in local.email_parsing : [for address in config.addresses : merge({ "endpoint" = address, "topic" = topic }, { for key, value in config : key => value if key != "addresses" })]]) : format("%s_%s", value.topic, idx) => value }
+  # Now we merge new map (email_subscription) with another subscription_configurations that not contains in var.only_update_resource_policy_protocols and ["email", "email-json"]
+  subscription = merge(local.email_subscription, { for key, value in var.subscription_configurations : key => value if !contains(concat(local.only_update_resource_policy_protocols, ["email", "email-json"]), value.protocol) })
 
   deliver_policy = var.override_topic_delivery_policy == "" ? jsonencode(var.default_deliver_policy) : var.override_topic_delivery_policy
 
@@ -52,8 +53,8 @@ module "kms" {
   append_random_suffix = true
 
   service_key_info = {
-    caller_account_ids = [data.aws_caller_identity.current.account_id]
-    aws_service_names  = [format("sns.%s.amazonaws.com", data.aws_region.current.name)]
+    caller_account_ids = [data.aws_caller_identity.this.account_id]
+    aws_service_names  = [format("sns.%s.amazonaws.com", data.aws_region.this.name)]
   }
 
   additional_policies = var.additional_kms_key_policies
@@ -178,7 +179,7 @@ data "aws_iam_policy_document" "additional_resource_policy" {
       condition {
         test     = "StringEquals"
         variable = "AWS:SourceOwner"
-        values   = [lookup(statement.value, "source_account", data.aws_caller_identity.current.account_id)]
+        values   = [lookup(statement.value, "source_account", data.aws_caller_identity.this.account_id)]
       }
 
       dynamic "condition" {
@@ -220,7 +221,7 @@ data "aws_iam_policy_document" "owner_policy" {
       test     = "StringEquals"
       variable = "AWS:SourceOwner"
       values = [
-        data.aws_caller_identity.current.account_id,
+        data.aws_caller_identity.this.account_id,
       ]
     }
   }
