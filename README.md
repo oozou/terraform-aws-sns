@@ -4,8 +4,8 @@
 
 ```terraform
 locals {
-  _name = format("%s-%s-%s", var.generic_info["prefix"], var.generic_info["environment"], var.generic_info["name"])
-  name  = format("%s%s", local._name, false ? ".fifo" : "")
+  daft_name = format("%s-%s-%s", var.generic_info["prefix"], var.generic_info["environment"], var.generic_info["name"])
+  name      = format("%s%s", local.daft_name, false ? ".fifo" : "")
 }
 
 module "sns" {
