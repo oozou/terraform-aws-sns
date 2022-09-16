@@ -1,45 +1,4 @@
 /* -------------------------------------------------------------------------- */
-/*                                  IAM Role                                  */
-/* -------------------------------------------------------------------------- */
-data "aws_iam_policy_document" "assume_role_policy" {
-  statement {
-    sid    = "AllowAWSToAssumeRole"
-    effect = "Allow"
-
-    actions = ["sts:AssumeRole"]
-
-    principals {
-      type        = "Service"
-      identifiers = ["cloudformation.amazonaws.com"]
-    }
-  }
-}
-
-data "aws_iam_policy_document" "role_policy" {
-  statement {
-    sid    = "AllowCloudFormation"
-    effect = "Allow"
-    actions = [
-      "sns:Subscribe",
-      "sns:Unsubscribe"
-    ]
-    resources = [local.this_sns_arn]
-  }
-}
-
-resource "aws_iam_role" "this" {
-  name               = format("%s-role", replace(local.name, ",", "-"))
-  assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
-
-  tags = merge(local.tags, { "Name" : format("%s-role", replace(local.name, ",", "-")) })
-}
-
-resource "aws_iam_role_policy" "sns_subscription" {
-  role   = aws_iam_role.this.id
-  policy = data.aws_iam_policy_document.role_policy.json
-}
-
-/* -------------------------------------------------------------------------- */
 /*                                Subscription                                */
 /* -------------------------------------------------------------------------- */
 # SNS | SQS = aws_sns_topic_subscription in the same region as SNS
